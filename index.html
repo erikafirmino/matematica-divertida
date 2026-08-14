@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Selva Matemágica — Aprenda Matemática Brincando</title>
+<meta name="description" content="Jogo de matemática infantil: adição, subtração, multiplicação e tabuada, e divisão.">
+
+<!-- ✏️ Fontes: Baloo 2 (títulos arredondados) + Nunito (texto/números) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="confetti-layer" aria-hidden="true"></div>
+<div id="bonus-toast" class="bonus-toast"></div>
+
+<main id="app">
+
+  <!-- =========================== MENU PRINCIPAL =========================== -->
+  <section id="screen-menu" class="screen active">
+    <header class="topbar">
+      <div class="brand">🌴 <span>Selva Matemágica</span></div>
+      <div class="wallet" aria-label="Sua pontuação">
+        <span class="wallet-item">🪙 <span class="coin-count">0</span></span>
+        <span class="wallet-item">⭐ <span class="star-count">0</span></span>
+      </div>
+    </header>
+
+    <div class="mascot-hero">
+      <div class="mascot" id="mascot">🦜</div>
+      <p class="mascot-speech mascot-speech-text">Oi! Eu sou o Toco!</p>
+    </div>
+
+    <h1 class="menu-title">Escolha sua trilha na selva!</h1>
+
+    <div class="menu-grid">
+      <!-- ✏️ Para adicionar/remover módulos, edite estes cartões e o app.js -->
+      <button class="op-card op-add" data-op="add">
+        <span class="op-icon">🐵</span>
+        <span class="op-name">Adição</span>
+        <span class="op-sub">Trilha do Macaco</span>
+      </button>
+
+      <button class="op-card op-sub" data-op="sub">
+        <span class="op-icon">🐘</span>
+        <span class="op-name">Subtração</span>
+        <span class="op-sub">Trilha do Elefante</span>
+      </button>
+
+      <button class="op-card op-mul" data-op="mul">
+        <span class="op-icon">🦜</span>
+        <span class="op-name">Multiplicação</span>
+        <span class="op-sub">Árvore da Tabuada</span>
+      </button>
+
+      <button class="op-card op-div" data-op="div">
+        <span class="op-icon">🐊</span>
+        <span class="op-name">Divisão</span>
+        <span class="op-sub">Rio dos Jacarés</span>
+      </button>
+    </div>
+
+    <button id="btn-parent-area" class="link-btn">👨‍👩‍👧 Área dos Pais / Professores</button>
+  </section>
+
+  <!-- =========================== SELETOR DE TABUADA =========================== -->
+  <section id="screen-table-picker" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-table-picker-back" aria-label="Voltar">⬅️</button>
+      <h2 id="table-picker-title" class="screen-title">Escolha a tabuada</h2>
+      <span></span>
+    </header>
+    <div class="table-picker-grid" id="table-picker-grid"></div>
+  </section>
+
+  <!-- =========================== TELA DE JOGO =========================== -->
+  <section id="screen-game" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" data-nav-back-to-menu aria-label="Voltar ao menu">⬅️</button>
+      <div class="wallet">
+        <span class="wallet-item">🪙 <span class="coin-count">0</span></span>
+        <span class="wallet-item">⭐ <span class="star-count">0</span></span>
+      </div>
+    </header>
+
+    <p id="game-progress-label" class="progress-label">Pergunta 1 de 8</p>
+    <div class="progress-track"><div id="game-progress-fill" class="progress-fill"></div></div>
+
+    <div class="mascot-hero mascot-hero-small">
+      <div class="mascot">🦜</div>
+      <p class="mascot-speech mascot-speech-text">Vamos lá!</p>
+    </div>
+
+    <div class="question-card" id="question-card">
+      <p id="question-text" class="question-text">?</p>
+    </div>
+
+    <div class="answer-options" id="answer-options"></div>
+  </section>
+
+  <!-- =========================== TELA DE RESULTADO =========================== -->
+  <section id="screen-result" class="screen">
+    <div class="result-card">
+      <div class="result-emoji" id="result-emoji">🌟</div>
+      <h2 id="result-op-label">Resultado</h2>
+      <p class="result-score" id="result-score">0 / 8</p>
+      <p class="result-message" id="result-message">Muito bem!</p>
+      <div class="result-buttons">
+        <button id="btn-play-again" class="btn btn-primary">Jogar de novo 🔁</button>
+        <button id="btn-result-menu" class="btn btn-secondary">Voltar ao menu 🏠</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== PAINEL DOS PAIS =========================== -->
+  <section id="screen-dashboard" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-dashboard-exit" aria-label="Sair">⬅️</button>
+      <h2 class="screen-title">Painel de Desempenho</h2>
+      <span></span>
+    </header>
+
+    <div class="dash-summary">
+      <div class="dash-summary-card">
+        <span class="dash-summary-value" id="dash-total">0</span>
+        <span class="dash-summary-label">Atividades</span>
+      </div>
+      <div class="dash-summary-card">
+        <span class="dash-summary-value" id="dash-accuracy">—</span>
+        <span class="dash-summary-label">Taxa de acerto</span>
+      </div>
+      <div class="dash-summary-card">
+        <span class="dash-summary-value" id="dash-correct">0</span>
+        <span class="dash-summary-label">Acertos</span>
+      </div>
+      <div class="dash-summary-card">
+        <span class="dash-summary-value" id="dash-errors">0</span>
+        <span class="dash-summary-label">Erros</span>
+      </div>
+      <div class="dash-summary-card">
+        <span class="dash-summary-value" id="dash-coins">0</span>
+        <span class="dash-summary-label">Moedas 🪙</span>
+      </div>
+      <div class="dash-summary-card">
+        <span class="dash-summary-value" id="dash-stars">0</span>
+        <span class="dash-summary-label">Estrelas ⭐</span>
+      </div>
+    </div>
+
+    <div id="dash-weak-alert" class="dash-alert"></div>
+
+    <h3 class="dash-section-title">Desempenho por operação</h3>
+    <div id="dash-by-op" class="dash-by-op"></div>
+
+    <h3 class="dash-section-title">Desempenho por tabuada (multiplicação e divisão)</h3>
+    <div id="dash-by-table" class="dash-table-grid"></div>
+
+    <button id="btn-dashboard-reset" class="btn btn-danger">Zerar Histórico 🗑️</button>
+  </section>
+
+</main>
+
+<!-- =========================== MODAL SENHA DOS PAIS =========================== -->
+<div id="modal-parent-login" class="modal">
+  <div class="modal-card">
+    <h3>Área dos Pais / Professores</h3>
+    <p>Digite a senha para continuar.</p>
+    <input type="password" id="parent-password-input" inputmode="numeric" maxlength="8" placeholder="Senha" class="modal-input">
+    <p id="parent-password-error" class="modal-error">Senha incorreta, tente de novo.</p>
+    <div class="modal-buttons">
+      <button id="btn-parent-cancel" class="btn btn-secondary">Cancelar</button>
+      <button id="btn-parent-confirm" class="btn btn-primary">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/questions.js"></script>
+<script src="js/game.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
