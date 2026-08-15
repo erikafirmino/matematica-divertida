@@ -87,3 +87,63 @@ function generateQuestion(op, tableNumber = null) {
       throw new Error('Operação desconhecida: ' + op);
   }
 }
+
+/* ============================================================
+   MODO "ARMAR CONTA" — algoritmo em colunas (unidades, dezenas...)
+   ============================================================
+   ✏️ Ajuste as faixas numéricas deste modo aqui. São separadas
+   das faixas da múltipla escolha porque, pra fazer sentido
+   "armar a conta" (com o vai-um / empresta-um), os números
+   precisam ter mais de 1 dígito.
+   ============================================================ */
+const COLUMN_RANGES = {
+  add: { min: 10, max: 89 },              // 2 números de 2 dígitos — a soma pode "estourar" pra 3 dígitos
+  subMinuendMax: 99,
+  mulMultiplicand: { min: 10, max: 89 },  // número de 2 dígitos
+  mulMultiplier: { min: 2, max: 9 },      // número de 1 dígito
+  divDivisor: { min: 2, max: 9 },
+  divQuotient: { min: 2, max: 9 }
+};
+
+/**
+ * Gera uma pergunta para o modo "Armar Conta".
+ * Para add/sub/mul, retorna os dois operandos + quantidade de dígitos,
+ * usados para desenhar as colunas. Para div, retorna um formato
+ * diferente (chave de divisão): dividendo, divisor e quociente.
+ */
+function generateColumnQuestion(op) {
+  switch (op) {
+    case 'add': {
+      const a = randInt(COLUMN_RANGES.add.min, COLUMN_RANGES.add.max);
+      const b = randInt(COLUMN_RANGES.add.min, COLUMN_RANGES.add.max);
+      const answer = a + b;
+      const numDigits = Math.max(String(a).length, String(b).length);
+      return { op, a, b, answer, symbol: '+', numDigits, resultLength: numDigits + 1, tableNumber: null };
+    }
+    case 'sub': {
+      const a = randInt(20, COLUMN_RANGES.subMinuendMax);
+      const b = randInt(10, a); // subtraendo nunca maior que o minuendo
+      const answer = a - b;
+      const numDigits = String(a).length;
+      return { op, a, b, answer, symbol: '−', numDigits, resultLength: numDigits, tableNumber: null };
+    }
+    case 'mul': {
+      const a = randInt(COLUMN_RANGES.mulMultiplicand.min, COLUMN_RANGES.mulMultiplicand.max);
+      const b = randInt(COLUMN_RANGES.mulMultiplier.min, COLUMN_RANGES.mulMultiplier.max);
+      const answer = a * b;
+      const numDigits = Math.max(String(a).length, String(b).length);
+      return { op, a, b, answer, symbol: '×', numDigits, resultLength: numDigits + 1, tableNumber: b };
+    }
+    case 'div': {
+      const divisor = randInt(COLUMN_RANGES.divDivisor.min, COLUMN_RANGES.divDivisor.max);
+      const quotient = randInt(COLUMN_RANGES.divQuotient.min, COLUMN_RANGES.divQuotient.max);
+      const dividend = divisor * quotient;
+      return {
+        op, isDivision: true, dividend, divisor, quotient,
+        product: dividend, remainder: 0, tableNumber: divisor
+      };
+    }
+    default:
+      throw new Error('Operação desconhecida (armar conta): ' + op);
+  }
+}
