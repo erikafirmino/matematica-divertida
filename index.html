@@ -77,6 +77,27 @@
     <div class="table-picker-grid" id="table-picker-grid"></div>
   </section>
 
+  <!-- =========================== SELETOR DE MODO =========================== -->
+  <section id="screen-mode-picker" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" data-nav-back-to-menu aria-label="Voltar">⬅️</button>
+      <h2 class="screen-title">Como você quer treinar?</h2>
+      <span></span>
+    </header>
+    <div class="mode-grid">
+      <button class="mode-card mode-choice" id="btn-mode-choice">
+        <span class="mode-icon">🔘</span>
+        <span class="mode-name">Múltipla Escolha</span>
+        <span class="mode-sub">Escolha a resposta certa entre as opções</span>
+      </button>
+      <button class="mode-card mode-column" id="btn-mode-column">
+        <span class="mode-icon">✏️</span>
+        <span class="mode-name">Armar Conta</span>
+        <span class="mode-sub">Monte a conta em colunas, do jeitinho da escola</span>
+      </button>
+    </div>
+  </section>
+
   <!-- =========================== TELA DE JOGO =========================== -->
   <section id="screen-game" class="screen">
     <header class="topbar">
@@ -100,6 +121,9 @@
     </div>
 
     <div class="answer-options" id="answer-options"></div>
+
+    <!-- Preenchido dinamicamente pelo game.js quando o modo é "Armar Conta" -->
+    <div class="column-calc hidden" id="column-calc"></div>
   </section>
 
   <!-- =========================== TELA DE RESULTADO =========================== -->
