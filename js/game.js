@@ -1,6 +1,12 @@
 /* ============================================================
    game.js — Mecânica do jogo (uma "rodada" de perguntas)
    ============================================================
+   Suporta dois modos, escolhidos pela criança na tela de
+   seleção de modo:
+   - 'choice'  → múltipla escolha (4 botões)
+   - 'column'  → "armar conta" (algoritmo em colunas, com o
+                  vai-um / empresta-um, e chave de divisão)
+
    ✏️ QUESTIONS_PER_ROUND controla quantas perguntas tem cada
       rodada antes de mostrar a tela de resultado.
    ✏️ As frases do mascote (MASCOT_LINES) podem ser editadas
@@ -28,6 +34,7 @@ const OP_LABELS = {
 let gameState = {
   op: null,
   tableNumber: null,
+  mode: 'choice', // 'choice' | 'column'
   index: 0,
   correctCount: 0,
   streak: 0,
@@ -38,8 +45,8 @@ function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function startRound(op, tableNumber = null) {
-  gameState = { op, tableNumber, index: 0, correctCount: 0, streak: 0, current: null };
+function startRound(op, tableNumber = null, mode = 'choice') {
+  gameState = { op, tableNumber, mode, index: 0, correctCount: 0, streak: 0, current: null };
   setMascotSpeech(pickRandom(MASCOT_LINES.start));
   renderNextQuestion();
 }
@@ -49,14 +56,41 @@ function renderNextQuestion() {
     endRound();
     return;
   }
-  const q = generateQuestion(gameState.op, gameState.tableNumber);
-  gameState.current = q;
 
-  document.getElementById('question-text').textContent = q.text;
   document.getElementById('game-progress-label').textContent =
     `Pergunta ${gameState.index + 1} de ${QUESTIONS_PER_ROUND}`;
   document.getElementById('game-progress-fill').style.width =
     `${Math.round((gameState.index / QUESTIONS_PER_ROUND) * 100)}%`;
+
+  if (gameState.mode === 'column') {
+    document.getElementById('question-card').classList.add('hidden');
+    document.getElementById('answer-options').classList.add('hidden');
+    document.getElementById('column-calc').classList.remove('hidden');
+
+    const q = generateColumnQuestion(gameState.op);
+    gameState.current = q;
+    if (q.isDivision) {
+      renderDivisionQuestion(q);
+    } else {
+      renderColumnQuestion(q);
+    }
+  } else {
+    document.getElementById('column-calc').classList.add('hidden');
+    document.getElementById('question-card').classList.remove('hidden');
+    document.getElementById('answer-options').classList.remove('hidden');
+
+    renderChoiceQuestion();
+  }
+}
+
+/* ============================================================
+   MODO MÚLTIPLA ESCOLHA
+   ============================================================ */
+function renderChoiceQuestion() {
+  const q = generateQuestion(gameState.op, gameState.tableNumber);
+  gameState.current = q;
+
+  document.getElementById('question-text').textContent = q.text;
 
   const optionsWrap = document.getElementById('answer-options');
   optionsWrap.innerHTML = '';
@@ -86,27 +120,15 @@ function handleAnswer(selected, btnEl) {
   });
 
   if (correct) {
-    gameState.correctCount++;
-    gameState.streak++;
     btnEl.classList.add('is-correct');
-    setMascotSpeech(pickRandom(MASCOT_LINES.correct));
-    spawnConfetti();
-    playFeedbackAnimation('bounce');
-
-    // ✏️ bônus de sequência — veja SCORING em storage.js
-    if (gameState.streak > 0 && gameState.streak % SCORING.streakSize === 0) {
-      addCoins(SCORING.bonusCoins);
-      showBonusToast(`Sequência de ${gameState.streak}! +${SCORING.bonusCoins} moedas 🪙`);
-    }
+    handleRoundSuccessFeedback();
   } else {
-    gameState.streak = 0;
     btnEl.classList.add('is-wrong');
     // destaca qual era a certa, sem deixar a criança travada
     document.querySelectorAll('.answer-btn').forEach(b => {
       if (Number(b.textContent) === q.answer) b.classList.add('is-correct');
     });
-    setMascotSpeech(pickRandom(MASCOT_LINES.wrong));
-    playFeedbackAnimation('shake');
+    handleRoundFailFeedback();
   }
 
   updateWalletDisplay();
@@ -121,11 +143,286 @@ function clearFeedback() {
   document.querySelectorAll('.answer-btn').forEach(b => b.disabled = false);
 }
 
+/* ============================================================
+   MODO "ARMAR CONTA" — Adição, Subtração e Multiplicação
+   ============================================================
+   Desenha os dois números empilhados por coluna (unidades,
+   dezenas...), com uma linha de rascunho opcional em cima
+   (pro "vai um" / "empresta 1") e caixinhas embaixo da linha
+   pra criança escrever o resultado, dígito por dígito.
+   A correção é feita pelo valor final (não dígito a dígito),
+   então não tem problema deixar caixas de "sobra" em branco.
+   ============================================================ */
+function padLeftArray(value, len) {
+  const s = String(value);
+  const arr = [];
+  for (let i = 0; i < len - s.length; i++) arr.push('');
+  for (const ch of s) arr.push(ch);
+  return arr;
+}
+
+function makeSlot(innerNode, extraClass) {
+  const slot = document.createElement('div');
+  slot.className = 'col-slot' + (extraClass ? ' ' + extraClass : '');
+  if (innerNode) slot.appendChild(innerNode);
+  return slot;
+}
+
+function makeDigitText(text, extraClass) {
+  const span = document.createElement('span');
+  span.className = 'col-digit' + (extraClass ? ' ' + extraClass : '');
+  span.textContent = text;
+  return span;
+}
+
+function renderColumnQuestion(q) {
+  const wrap = document.getElementById('column-calc');
+  wrap.innerHTML = '';
+
+  const cols = q.numDigits + 1; // 1 coluna extra reservada pro símbolo/alinhamento
+  const digitsA = padLeftArray(q.a, q.numDigits);
+  const digitsB = padLeftArray(q.b, q.numDigits);
+
+  const grid = document.createElement('div');
+  grid.className = 'col-grid';
+
+  // linha de rascunho (vai-um / empresta-um) — opcional, não é corrigida
+  const carryRow = document.createElement('div');
+  carryRow.className = 'col-row';
+  carryRow.appendChild(makeSlot(null));
+  for (let i = 0; i < q.numDigits; i++) {
+    const input = document.createElement('input');
+    input.className = 'col-carry-input';
+    input.maxLength = 1;
+    input.inputMode = 'numeric';
+    input.setAttribute('aria-label', 'rascunho');
+    carryRow.appendChild(makeSlot(input));
+  }
+  grid.appendChild(carryRow);
+
+  // linha do número A
+  const rowA = document.createElement('div');
+  rowA.className = 'col-row';
+  rowA.appendChild(makeSlot(null));
+  digitsA.forEach(d => rowA.appendChild(makeSlot(d ? makeDigitText(d) : null)));
+  grid.appendChild(rowA);
+
+  // linha do número B, com o símbolo da operação
+  const rowB = document.createElement('div');
+  rowB.className = 'col-row';
+  rowB.appendChild(makeSlot(makeDigitText(q.symbol, 'col-symbol')));
+  digitsB.forEach(d => rowB.appendChild(makeSlot(d ? makeDigitText(d) : null)));
+  grid.appendChild(rowB);
+
+  // linha divisória
+  grid.appendChild(Object.assign(document.createElement('div'), { className: 'col-line' }));
+
+  // linha de resultado (editável)
+  const resultRow = document.createElement('div');
+  resultRow.className = 'col-row';
+  const blanks = cols - q.resultLength;
+  for (let i = 0; i < blanks; i++) resultRow.appendChild(makeSlot(null));
+  const resultInputs = [];
+  for (let i = 0; i < q.resultLength; i++) {
+    const input = document.createElement('input');
+    input.className = 'col-result-input';
+    input.maxLength = 1;
+    input.inputMode = 'numeric';
+    input.setAttribute('aria-label', 'dígito do resultado');
+    resultInputs.push(input);
+    resultRow.appendChild(makeSlot(input));
+  }
+  grid.appendChild(resultRow);
+
+  wrap.appendChild(grid);
+  setupAutoAdvance(resultInputs);
+
+  const checkBtn = document.createElement('button');
+  checkBtn.className = 'btn btn-primary col-check-btn';
+  checkBtn.textContent = 'Conferir ✅';
+  checkBtn.addEventListener('click', () => checkColumnAnswer(q, resultInputs, checkBtn));
+  wrap.appendChild(checkBtn);
+
+  // a conta se resolve da direita pra esquerda — foco começa na última casa
+  if (resultInputs.length) resultInputs[resultInputs.length - 1].focus();
+}
+
+// digita um dígito → foca automaticamente na casa à esquerda (fluxo real da conta)
+function setupAutoAdvance(inputs) {
+  inputs.forEach((input, idx) => {
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/[^0-9]/g, '').slice(-1);
+      if (input.value && idx > 0) inputs[idx - 1].focus();
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !input.value && idx < inputs.length - 1) {
+        inputs[idx + 1].focus();
+      }
+      if (e.key === 'Enter') document.querySelector('.col-check-btn')?.click();
+    });
+  });
+}
+
+function checkColumnAnswer(q, resultInputs, checkBtn) {
+  const combined = resultInputs.map(i => (i.value === '' ? '0' : i.value)).join('');
+  const value = parseInt(combined, 10);
+  const correct = value === q.answer;
+
+  recordAttempt({
+    op: q.op,
+    tableNumber: q.tableNumber,
+    questionText: `${q.a} ${q.symbol} ${q.b}`,
+    correct
+  });
+
+  resultInputs.forEach(i => { i.disabled = true; i.classList.add(correct ? 'is-correct' : 'is-wrong'); });
+  checkBtn.disabled = true;
+
+  if (correct) {
+    handleRoundSuccessFeedback();
+  } else {
+    handleRoundFailFeedback();
+    showColumnAnswerHint(`A resposta certa era ${q.answer}`);
+  }
+
+  updateWalletDisplay();
+
+  setTimeout(() => {
+    gameState.index++;
+    renderNextQuestion();
+  }, correct ? 1200 : 2200);
+}
+
+function showColumnAnswerHint(text) {
+  const hint = document.createElement('p');
+  hint.className = 'col-answer-hint';
+  hint.textContent = text;
+  document.getElementById('column-calc').appendChild(hint);
+}
+
+/* ============================================================
+   MODO "ARMAR CONTA" — Divisão (chave de divisão)
+   ============================================================
+   Layout clássico usado nas escolas: quociente em cima,
+   dividendo dentro da "chave", divisor do lado de fora.
+   A criança preenche quociente, produto (divisor × quociente)
+   e resto — os três precisam estar certos.
+   ============================================================ */
+function renderDivisionQuestion(q) {
+  const wrap = document.getElementById('column-calc');
+  wrap.innerHTML = '';
+
+  const box = document.createElement('div');
+  box.className = 'div-calc';
+  box.innerHTML = `
+    <div class="div-bracket-wrap">
+      <input class="div-quotient-input" id="div-quotient" maxlength="2" inputmode="numeric" aria-label="quociente">
+      <div class="div-bracket">
+        <span class="div-dividend">${q.dividend}</span>
+        <span class="div-divisor">${q.divisor}</span>
+      </div>
+    </div>
+    <div class="div-steps">
+      <label>Produto (divisor × quociente)
+        <input class="div-step-input" id="div-product" maxlength="3" inputmode="numeric">
+      </label>
+      <label>Resto
+        <input class="div-step-input" id="div-remainder" maxlength="2" inputmode="numeric">
+      </label>
+    </div>
+  `;
+  wrap.appendChild(box);
+
+  const checkBtn = document.createElement('button');
+  checkBtn.className = 'btn btn-primary col-check-btn';
+  checkBtn.textContent = 'Conferir ✅';
+  checkBtn.addEventListener('click', () => checkDivisionAnswer(q, checkBtn));
+  wrap.appendChild(checkBtn);
+
+  const quotientInput = document.getElementById('div-quotient');
+  quotientInput.focus();
+  quotientInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('div-product').focus();
+  });
+  document.getElementById('div-product').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('div-remainder').focus();
+  });
+  document.getElementById('div-remainder').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') checkBtn.click();
+  });
+}
+
+function checkDivisionAnswer(q, checkBtn) {
+  const quotientInput = document.getElementById('div-quotient');
+  const productInput = document.getElementById('div-product');
+  const remainderInput = document.getElementById('div-remainder');
+
+  const quotientVal = parseInt(quotientInput.value || '0', 10);
+  const productVal = parseInt(productInput.value || '0', 10);
+  const remainderVal = parseInt(remainderInput.value || '0', 10);
+
+  const quotientOk = quotientVal === q.quotient;
+  const productOk = productVal === q.product;
+  const remainderOk = remainderVal === 0;
+  const correct = quotientOk && productOk && remainderOk;
+
+  recordAttempt({
+    op: 'div',
+    tableNumber: q.tableNumber,
+    questionText: `${q.dividend} ÷ ${q.divisor}`,
+    correct
+  });
+
+  [quotientInput, productInput, remainderInput].forEach(i => i.disabled = true);
+  checkBtn.disabled = true;
+  quotientInput.classList.add(quotientOk ? 'is-correct' : 'is-wrong');
+  productInput.classList.add(productOk ? 'is-correct' : 'is-wrong');
+  remainderInput.classList.add(remainderOk ? 'is-correct' : 'is-wrong');
+
+  if (correct) {
+    handleRoundSuccessFeedback();
+  } else {
+    handleRoundFailFeedback();
+    showColumnAnswerHint(`Quociente: ${q.quotient} · Produto: ${q.product} · Resto: 0`);
+  }
+
+  updateWalletDisplay();
+
+  setTimeout(() => {
+    gameState.index++;
+    renderNextQuestion();
+  }, correct ? 1200 : 2400);
+}
+
+/* ============================================================
+   Feedback compartilhado entre os dois modos
+   ============================================================ */
+function handleRoundSuccessFeedback() {
+  gameState.correctCount++;
+  gameState.streak++;
+  setMascotSpeech(pickRandom(MASCOT_LINES.correct));
+  spawnConfetti();
+  playFeedbackAnimation('bounce');
+
+  // ✏️ bônus de sequência — veja SCORING em storage.js
+  if (gameState.streak > 0 && gameState.streak % SCORING.streakSize === 0) {
+    addCoins(SCORING.bonusCoins);
+    showBonusToast(`Sequência de ${gameState.streak}! +${SCORING.bonusCoins} moedas 🪙`);
+  }
+}
+
+function handleRoundFailFeedback() {
+  gameState.streak = 0;
+  setMascotSpeech(pickRandom(MASCOT_LINES.wrong));
+  playFeedbackAnimation('shake');
+}
+
 function playFeedbackAnimation(kind) {
-  const card = document.getElementById('question-card');
+  const card = gameState.mode === 'column'
+    ? document.getElementById('column-calc')
+    : document.getElementById('question-card');
   card.classList.remove('anim-bounce', 'anim-shake');
-  // força reflow pra animação poder tocar de novo
-  void card.offsetWidth;
+  void card.offsetWidth; // força reflow pra animação poder tocar de novo
   card.classList.add(kind === 'bounce' ? 'anim-bounce' : 'anim-shake');
 }
 
