@@ -1,11 +1,13 @@
 /* ============================================================
    app.js — Navegação entre telas e amarração dos eventos
    ============================================================
-   Esse arquivo liga os cliques do usuário às funções que estão
-   em game.js, dashboard.js e storage.js.
+   Fluxo de telas:
+   menu → (se mul/div: seletor de tabuada) → seletor de modo
+        → jogo → resultado
    ============================================================ */
 
-let pendingOp = null; // guarda a operação escolhida antes de abrir o seletor de tabuada
+let pendingOp = null;    // operação escolhida no menu, aguardando a escolha de modo
+let pendingTable = null; // tabuada escolhida (mul/div), aguardando a escolha de modo
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -32,8 +34,8 @@ function buildTablePicker() {
   mixBtn.className = 'table-btn table-btn-mix';
   mixBtn.innerHTML = '🎲<br>Misturar tudo';
   mixBtn.addEventListener('click', () => {
-    startRound(pendingOp, null);
-    showScreen('screen-game');
+    pendingTable = null;
+    showScreen('screen-mode-picker');
   });
   grid.appendChild(mixBtn);
 
@@ -42,8 +44,8 @@ function buildTablePicker() {
     btn.className = 'table-btn';
     btn.textContent = n;
     btn.addEventListener('click', () => {
-      startRound(pendingOp, n);
-      showScreen('screen-game');
+      pendingTable = n;
+      showScreen('screen-mode-picker');
     });
     grid.appendChild(btn);
   }
@@ -53,17 +55,29 @@ function initMenuButtons() {
   document.querySelectorAll('.op-card').forEach(card => {
     card.addEventListener('click', () => {
       const op = card.dataset.op;
+      pendingOp = op;
       if (op === 'mul' || op === 'div') {
-        pendingOp = op;
         document.getElementById('table-picker-title').textContent =
           op === 'mul' ? 'Escolha a tabuada para treinar' : 'Escolha a tabuada da divisão';
         buildTablePicker();
         showScreen('screen-table-picker');
       } else {
-        startRound(op);
-        showScreen('screen-game');
+        pendingTable = null;
+        showScreen('screen-mode-picker');
       }
     });
+  });
+}
+
+/* ---------- Seletor de modo (Múltipla Escolha vs Armar Conta) ---------- */
+function initModePicker() {
+  document.getElementById('btn-mode-choice').addEventListener('click', () => {
+    startRound(pendingOp, pendingTable, 'choice');
+    showScreen('screen-game');
+  });
+  document.getElementById('btn-mode-column').addEventListener('click', () => {
+    startRound(pendingOp, pendingTable, 'column');
+    showScreen('screen-game');
   });
 }
 
@@ -76,7 +90,7 @@ function initBackButtons() {
 
 function initResultButtons() {
   document.getElementById('btn-play-again').addEventListener('click', () => {
-    startRound(gameState.op, gameState.tableNumber);
+    startRound(gameState.op, gameState.tableNumber, gameState.mode);
     showScreen('screen-game');
   });
   document.getElementById('btn-result-menu').addEventListener('click', () => showScreen('screen-menu'));
@@ -121,6 +135,7 @@ function initParentArea() {
 document.addEventListener('DOMContentLoaded', () => {
   updateWalletDisplay();
   initMenuButtons();
+  initModePicker();
   initBackButtons();
   initResultButtons();
   initParentArea();
