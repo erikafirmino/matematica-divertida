@@ -314,22 +314,34 @@ function renderDivisionQuestion(q) {
 
   const box = document.createElement('div');
   box.className = 'div-calc';
+
+  const quotientBoxesHTML = q.steps.map((s, i) =>
+    `<input class="div-quotient-digit" data-step="${i}" maxlength="1" inputmode="numeric" aria-label="dígito ${i + 1} do quociente">`
+  ).join('');
+
+  const stepsHTML = q.steps.map((s, i) => `
+    <div class="div-step-block">
+      <span class="div-step-current">${s.current}</span>
+      <div class="div-step-sub">
+        <span class="div-step-minus">−</span>
+        <input class="div-step-product" data-step="${i}" maxlength="2" inputmode="numeric" aria-label="produto do passo ${i + 1}">
+      </div>
+      <span class="div-step-line"></span>
+      <span class="div-step-remainder" data-step="${i}">?</span>
+    </div>
+  `).join('<span class="div-step-arrow">⬇</span>');
+
   box.innerHTML = `
-    <div class="div-bracket-wrap">
-      <input class="div-quotient-input" id="div-quotient" maxlength="2" inputmode="numeric" aria-label="quociente">
-      <div class="div-bracket">
-        <span class="div-dividend">${q.dividend}</span>
-        <span class="div-divisor">${q.divisor}</span>
+    <div class="div-key">
+      <span class="div-key-dividend">${q.dividend}</span>
+      <span class="div-key-bar"></span>
+      <div class="div-key-right">
+        <span class="div-key-divisor">${q.divisor}</span>
+        <span class="div-key-line"></span>
+        <div class="div-quotient-boxes">${quotientBoxesHTML}</div>
       </div>
     </div>
-    <div class="div-steps">
-      <label>Produto (divisor × quociente)
-        <input class="div-step-input" id="div-product" maxlength="3" inputmode="numeric">
-      </label>
-      <label>Resto
-        <input class="div-step-input" id="div-remainder" maxlength="2" inputmode="numeric">
-      </label>
-    </div>
+    <div class="div-steps-stack">${stepsHTML}</div>
   `;
   wrap.appendChild(box);
 
@@ -339,51 +351,49 @@ function renderDivisionQuestion(q) {
   checkBtn.addEventListener('click', () => checkDivisionAnswer(q, checkBtn));
   wrap.appendChild(checkBtn);
 
-  const quotientInput = document.getElementById('div-quotient');
-  quotientInput.focus();
-  quotientInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') document.getElementById('div-product').focus();
-  });
-  document.getElementById('div-product').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') document.getElementById('div-remainder').focus();
-  });
-  document.getElementById('div-remainder').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') checkBtn.click();
-  });
+  const firstInput = wrap.querySelector('.div-quotient-digit');
+  if (firstInput) firstInput.focus();
 }
 
 function checkDivisionAnswer(q, checkBtn) {
-  const quotientInput = document.getElementById('div-quotient');
-  const productInput = document.getElementById('div-product');
-  const remainderInput = document.getElementById('div-remainder');
+  const quotientInputs = Array.from(document.querySelectorAll('.div-quotient-digit'));
+  const productInputs = Array.from(document.querySelectorAll('.div-step-product'));
 
-  const quotientVal = parseInt(quotientInput.value || '0', 10);
-  const productVal = parseInt(productInput.value || '0', 10);
-  const remainderVal = parseInt(remainderInput.value || '0', 10);
+  let allOk = true;
 
-  const quotientOk = quotientVal === q.quotient;
-  const productOk = productVal === q.product;
-  const remainderOk = remainderVal === 0;
-  const correct = quotientOk && productOk && remainderOk;
+  quotientInputs.forEach((input, i) => {
+    const val = parseInt(input.value, 10);
+    const ok = val === q.steps[i].digit;
+    input.classList.add(ok ? 'is-correct' : 'is-wrong');
+    input.disabled = true;
+    if (!ok) allOk = false;
+  });
+
+  productInputs.forEach((input, i) => {
+    const val = parseInt(input.value, 10);
+    const ok = val === q.steps[i].product;
+    input.classList.add(ok ? 'is-correct' : 'is-wrong');
+    input.disabled = true;
+    if (!ok) allOk = false;
+    // revela o resto desse passo, seguindo pro próximo degrau da escadinha
+    const remEl = document.querySelector(`.div-step-remainder[data-step="${i}"]`);
+    if (remEl) remEl.textContent = q.steps[i].remainder;
+  });
+
+  checkBtn.disabled = true;
 
   recordAttempt({
     op: 'div',
     tableNumber: q.tableNumber,
     questionText: `${q.dividend} ÷ ${q.divisor}`,
-    correct
+    correct: allOk
   });
 
-  [quotientInput, productInput, remainderInput].forEach(i => i.disabled = true);
-  checkBtn.disabled = true;
-  quotientInput.classList.add(quotientOk ? 'is-correct' : 'is-wrong');
-  productInput.classList.add(productOk ? 'is-correct' : 'is-wrong');
-  remainderInput.classList.add(remainderOk ? 'is-correct' : 'is-wrong');
-
-  if (correct) {
+  if (allOk) {
     handleRoundSuccessFeedback();
   } else {
     handleRoundFailFeedback();
-    showColumnAnswerHint(`Quociente: ${q.quotient} · Produto: ${q.product} · Resto: 0`);
+    showColumnAnswerHint(`Quociente: ${q.quotient} · Resto: ${q.remainder}`);
   }
 
   updateWalletDisplay();
@@ -391,7 +401,7 @@ function checkDivisionAnswer(q, checkBtn) {
   setTimeout(() => {
     gameState.index++;
     renderNextQuestion();
-  }, correct ? 1200 : 2400);
+  }, allOk ? 1200 : 2400);
 }
 
 /* ============================================================
