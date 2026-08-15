@@ -31,7 +31,8 @@ python3 -m http.server 8000
 | O que você quer mudar                          | Arquivo                  |
 |-------------------------------------------------|---------------------------|
 | Cores do app                                     | `css/style.css` → bloco `:root` no topo |
-| Faixas numéricas das perguntas (fácil/difícil)   | `js/questions.js` → objeto `RANGES` |
+| Faixas numéricas — modo múltipla escolha         | `js/questions.js` → objeto `RANGES` |
+| Faixas numéricas — modo "Armar Conta"            | `js/questions.js` → objeto `COLUMN_RANGES` |
 | Quantidade de perguntas por rodada               | `js/game.js` → `QUESTIONS_PER_ROUND` |
 | Regras de pontuação (moedas, bônus, estrelas)    | `js/storage.js` → objeto `SCORING` |
 | Senha da Área dos Pais                           | `js/dashboard.js` → `PARENT_PASSWORD` |
