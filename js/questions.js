@@ -101,9 +101,44 @@ const COLUMN_RANGES = {
   subMinuendMax: 99,
   mulMultiplicand: { min: 10, max: 89 },  // número de 2 dígitos
   mulMultiplier: { min: 2, max: 9 },      // número de 1 dígito
-  divDivisor: { min: 2, max: 9 },
-  divQuotient: { min: 2, max: 9 }
+  divDivisor: { min: 2, max: 9 }          // divisor de 1 dígito
 };
+
+/**
+ * Calcula os passos do algoritmo da divisão longa (chave de divisão),
+ * "descendo" um dígito do dividendo por vez — igual ao jeito ensinado
+ * na escola. Funciona pra qualquer dividendo/divisor de 1 dígito.
+ * Retorna: quociente, resto final, e a lista de passos (um por dígito
+ * "descido" a partir do primeiro dígito significativo do quociente).
+ */
+function longDivisionSteps(dividend, divisor) {
+  const digits = String(dividend).split('').map(Number);
+  const steps = [];
+  const quotientDigits = [];
+  let remainder = 0;
+  let started = false;
+
+  digits.forEach(d => {
+    const current = remainder * 10 + d;      // "desce" o próximo dígito
+    const digit = Math.floor(current / divisor);
+    const product = digit * divisor;
+    const newRemainder = current - product;
+
+    if (digit > 0) started = true;
+
+    if (started) {
+      quotientDigits.push(digit);
+      steps.push({ current, digit, product, remainder: newRemainder });
+    }
+    remainder = newRemainder;
+  });
+
+  return {
+    quotient: quotientDigits.length ? parseInt(quotientDigits.join(''), 10) : 0,
+    remainder,
+    steps
+  };
+}
 
 /**
  * Gera uma pergunta para o modo "Armar Conta".
@@ -135,12 +170,17 @@ function generateColumnQuestion(op) {
       return { op, a, b, answer, symbol: '×', numDigits, resultLength: numDigits + 1, tableNumber: b };
     }
     case 'div': {
+      // ✏️ Gera um dividendo de 3 dígitos e divisor de 1 dígito, resultando
+      // sempre num quociente de 2 dígitos (ex.: 536 ÷ 8 = 67), pra treinar
+      // a divisão longa com pelo menos 2 passos, igual no caderno da escola.
       const divisor = randInt(COLUMN_RANGES.divDivisor.min, COLUMN_RANGES.divDivisor.max);
-      const quotient = randInt(COLUMN_RANGES.divQuotient.min, COLUMN_RANGES.divQuotient.max);
+      const minQuotient = Math.max(10, Math.ceil(100 / divisor));
+      const maxQuotient = Math.min(99, Math.floor(999 / divisor));
+      const quotient = randInt(minQuotient, maxQuotient);
       const dividend = divisor * quotient;
+      const { steps, remainder } = longDivisionSteps(dividend, divisor);
       return {
-        op, isDivision: true, dividend, divisor, quotient,
-        product: dividend, remainder: 0, tableNumber: divisor
+        op, isDivision: true, dividend, divisor, quotient, remainder, steps, tableNumber: divisor
       };
     }
     default:
