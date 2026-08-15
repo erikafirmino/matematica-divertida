@@ -642,67 +642,65 @@ input { font-family: inherit; }
 }
 
 /* ---------------- Armar Conta — Divisão (chave de divisão) ---------------- */
-.div-bracket-wrap {
+/* Formato clássico das escolas brasileiras:
+   dividendo | divisor
+             |----------
+             | quociente  ← a criança escreve aqui */
+.div-key {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin-bottom: 18px;
+  align-items: stretch;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
-.div-quotient-input {
-  width: 60px;
-  height: 44px;
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 800;
-  text-align: center;
-  border: 2px solid #E1E8E4;
-  border-radius: var(--radius-sm);
-  color: var(--jungle-green-dark);
-  margin-left: 46px;
-  background: #FAFDFB;
-}
-.div-quotient-input:focus { outline: none; border-color: var(--jungle-green); }
-.div-quotient-input.is-correct { background: var(--jungle-green); color: white; }
-.div-quotient-input.is-wrong { background: var(--hot-pink); color: white; }
-
-.div-bracket {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.div-key-dividend {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.8rem;
-}
-.div-dividend {
-  border-right: 3px solid var(--ink);
-  border-top: 3px solid var(--ink);
-  padding: 4px 16px 4px 6px;
-  border-radius: 0 8px 0 0;
-}
-.div-divisor { color: var(--ink-soft); }
-
-.div-steps {
+  font-size: 1.9rem;
+  color: var(--ink);
   display: flex;
-  flex-direction: column;
-  gap: 12px;
   align-items: center;
-  margin-top: 10px;
 }
-.div-steps label {
+
+.div-key-bar {
+  width: 3px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+
+.div-key-right {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
-  font-weight: 700;
+  align-items: center;
+  gap: 6px;
+  min-width: 76px;
+  padding-top: 2px;
+}
+
+.div-key-divisor {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.3rem;
   color: var(--ink-soft);
 }
-.div-step-input {
-  width: 100px;
-  height: 40px;
+
+.div-key-line {
+  width: 100%;
+  border-bottom: 3px solid var(--ink);
+  border-radius: 2px;
+}
+
+.div-quotient-boxes {
+  display: flex;
+  gap: 4px;
+}
+
+.div-quotient-digit {
+  width: 30px;
+  height: 38px;
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 800;
   text-align: center;
   border: 2px solid #E1E8E4;
@@ -710,9 +708,72 @@ input { font-family: inherit; }
   color: var(--jungle-green-dark);
   background: #FAFDFB;
 }
-.div-step-input:focus { outline: none; border-color: var(--jungle-green); }
-.div-step-input.is-correct { background: var(--jungle-green); color: white; }
-.div-step-input.is-wrong { background: var(--hot-pink); color: white; }
+.div-quotient-digit:focus { outline: none; border-color: var(--jungle-green); }
+.div-quotient-digit.is-correct { background: var(--jungle-green); color: white; }
+.div-quotient-digit.is-wrong { background: var(--hot-pink); color: white; }
+
+/* Escadinha de passos da divisão longa (desce o dígito → subtrai → resto) */
+.div-steps-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.div-step-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.div-step-current {
+  font-size: 1.25rem;
+  color: var(--ink);
+  padding-right: 4px;
+}
+
+.div-step-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.div-step-minus { color: var(--mango-orange); font-size: 1.1rem; }
+
+.div-step-product {
+  width: 54px;
+  height: 34px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-align: center;
+  border: 2px solid #E1E8E4;
+  border-radius: var(--radius-sm);
+  color: var(--jungle-green-dark);
+  background: #FAFDFB;
+}
+.div-step-product:focus { outline: none; border-color: var(--jungle-green); }
+.div-step-product.is-correct { background: var(--jungle-green); color: white; }
+.div-step-product.is-wrong { background: var(--hot-pink); color: white; }
+
+.div-step-line {
+  width: 64px;
+  border-bottom: 3px solid var(--ink);
+  border-radius: 2px;
+}
+
+.div-step-remainder {
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  padding-right: 4px;
+}
+
+.div-step-arrow {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
 
 /* ---------------- Responsivo ---------------- */
 @media (min-width: 640px) {
