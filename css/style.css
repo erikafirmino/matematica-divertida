@@ -626,7 +626,10 @@ input { font-family: inherit; }
 .col-result-input.is-correct { background: var(--jungle-green); color: white; border-color: var(--jungle-green-dark); }
 .col-result-input.is-wrong { background: var(--hot-pink); color: white; border-color: #C23260; }
 
-.col-check-btn { margin-top: 20px; }
+.col-check-btn {
+  display: block;
+  margin: 20px auto 0;
+}
 
 .col-answer-hint {
   margin-top: 14px;
